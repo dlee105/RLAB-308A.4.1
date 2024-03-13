@@ -10,6 +10,9 @@ const progressBar = document.getElementById("progressBar");
 // The get favourites button element.
 const getFavouritesBtn = document.getElementById("getFavouritesBtn");
 
+const favList = document.getElementById("favList");
+
+const favData = [];
 // window.addEventListener("click", (e) => {
 //   if (
 //     e.target.tagName == "path" &&
@@ -158,7 +161,44 @@ async function getSelectedInfo(query) {
  * - Each new selection should clear, re-populate, and restart the Carousel.
  * - Add a call to this function to the end of your initialLoad function above to create the initial carousel.
  */
-breedSelect.addEventListener("onLoad", initialLoad2());
+const deleteFav = async (id) => {
+  for (let obj of favData) {
+    if (obj.id == id) {
+      console.log(true);
+      break;
+    }
+  }
+  await axios.delete("https://api.thecatapi.com/v1/favourites/" + id, config);
+};
+
+const checkFav = async () => {
+  const { data } = await axios.get(
+    `https://api.thecatapi.com/v1/favourites?limit=20&sub_id=duyle`,
+    config
+  );
+
+  const temp = document.createElement("div");
+  temp.classList.add("d-flex", "flex-wrap");
+
+  data.map((obj) => {
+    const listItem = document.createElement("div");
+    listItem.style.position = "relative";
+    listItem.innerHTML = `<img src=${obj.image.url} alt="" width="150px" height="150px"/>
+    <button style="position: absolute; top: 0; left: 0;" id="${obj.id}">Remove</button>
+    `;
+    temp.appendChild(listItem);
+    favData.push(obj);
+  });
+  favList.appendChild(temp);
+  console.log(favData);
+};
+
+const load = () => {
+  initialLoad2();
+  checkFav();
+};
+
+breedSelect.addEventListener("onLoad", load());
 
 breedSelect.addEventListener("change", (e) => {
   e.preventDefault();
@@ -234,17 +274,6 @@ export async function favourite(imgId) {
   // your code here
 }
 
-const checkFav = async () => {
-  const { data } = await axios.get(
-    `https://api.thecatapi.com/v1/favourites?limit=20&sub_id=duyle`,
-    config
-  );
-
-  console.log(await data);
-};
-
-checkFav();
-
 /**
  * 9. Test your favourite() function by creating a getFavourites() function.
  * - Use Axios to get all of your favourites from the cat API.
@@ -254,6 +283,23 @@ checkFav();
  *    If that isn't in its own function, maybe it should be so you don't have to
  *    repeat yourself in this section.
  */
+
+getFavouritesBtn.addEventListener("click", async (e) => {
+  e.preventDefault();
+  Carousel.clear();
+
+  let { data } = await axios.get(
+    "https://api.thecatapi.com/v1/favourites?sub_id=duyle",
+    config
+  );
+
+  console.log(data);
+  data.map((obj) => {
+    Carousel.appendCarousel(
+      Carousel.createCarouselItem(obj.image.url, obj.image_id, obj.image_id)
+    );
+  });
+});
 
 /**
  * 10. Test your site, thoroughly!
