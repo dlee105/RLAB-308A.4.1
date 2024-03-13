@@ -13,6 +13,7 @@ export function createCarouselItem(imgSrc, imgAlt, imgId) {
   clone.firstElementChild.children[1].innerHTML = `<h2 style="text-align: center; padding-top: 20px">${imgAlt}</h2>`;
 
   const favBtn = clone.querySelector(".favourite-button");
+
   favBtn.addEventListener("click", () => {
     favourite(imgId);
   });

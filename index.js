@@ -10,6 +10,15 @@ const progressBar = document.getElementById("progressBar");
 // The get favourites button element.
 const getFavouritesBtn = document.getElementById("getFavouritesBtn");
 
+// window.addEventListener("click", (e) => {
+//   if (
+//     e.target.tagName == "path" &&
+//     e.target.parentNode.parentNode.classList.contains("favourite-button")
+//   ) {
+//     console.log(true);
+//     let id = e.target.parentNode.parentNode.previousElementSibling.id;
+//   }
+// });
 // Step 0: Store your API key here for reference and easy access.
 
 const API_KEY =
@@ -30,28 +39,100 @@ var requestOptions = {
   redirect: "follow",
 };
 
+let config = {
+  headers: { "Content-Type": "application/json" },
+  onDownloadProgress: (progressEvent) => {
+    const bodyEl = document.querySelector("body");
+    bodyEl.style.cursor = "wait";
+
+    const percentage = Math.round(
+      (progressEvent.loaded * 100) / progressEvent.total
+    );
+    progressBar.style.width = `${percentage}%`;
+    console.log(percentage);
+    if (percentage === 100) {
+      console.log("DONE");
+    }
+    setTimeout(() => (bodyEl.style.cursor = "auto"), 1200);
+  },
+};
+
+// CALCULATING API RUNTIME WITH INTERCEPTORS
+axios.interceptors.request.use(
+  function (config) {
+    console.time(config.url);
+    return config;
+  },
+  function (error) {
+    return Promise.reject(error);
+  }
+);
+
+axios.interceptors.response.use(
+  (response) => {
+    console.timeEnd(response.config.url);
+    return response;
+  },
+  (error) => {
+    console.timeEnd(error.response.config.url);
+    return Promise.reject(error);
+  }
+);
+
 async function initialLoad2() {
+  console.log("Loading...");
   await axios
-    .get(endpoint + "breeds", {
-      headers: { "Content-Type": "application/json" },
-    })
+    .get(endpoint + "breeds", config)
     .then((response) => {
-      console.log(response.duration);
+      console.log(response.data);
       for (let obj of response.data) {
         if (!obj.image) break;
         const carouselItem = Carousel.createCarouselItem(
           obj.image.url,
           obj.name,
-          obj.id
+          obj.image.id
         );
         Carousel.appendCarousel(carouselItem);
         const breedName = document.createElement("option");
+        breedName.setAttribute("id", obj.id);
         breedName.innerText = obj.name;
         breedSelect.appendChild(breedName);
       }
       Carousel.start();
     })
     .catch((error) => console.log);
+}
+
+async function getSelectedInfo(query) {
+  progressBar.style.width = "0";
+  infoDump.innerHTML = "";
+
+  const { data } = await axios.get(
+    endpoint + `breeds/search?q=${query}`,
+    config
+  );
+
+  let parsedData = {
+    id: data[0].id,
+    name: data[0].name,
+    weight: `${data[0].weight.imperial} pounds`,
+    height: `${data[0].weight.metric} inches`,
+    life_span: `${data[0].life_span} years`,
+    image: data[0].image,
+  };
+  let firstBreed = parsedData;
+  console.log(parsedData);
+  infoDump.innerHTML = `
+  <div class="d-flex">
+    <img src=${parsedData.image.url} alt="" width="250px" height="250px" id=${parsedData.image.id}/>
+    <div class="px-5 d-flex flex-column">
+      <h1>Selected Cat: ${parsedData.name}</h1>
+      <p>ID: ${parsedData.id}</p>
+      <p>Weight: ${parsedData.weight}</p>
+      <p>Height: ${parsedData.height}</p>
+      <p>Life Span: ${parsedData.life_span}</p> 
+    </div>
+  </div>`;
 }
 
 /**
@@ -78,6 +159,11 @@ async function initialLoad2() {
  * - Add a call to this function to the end of your initialLoad function above to create the initial carousel.
  */
 breedSelect.addEventListener("onLoad", initialLoad2());
+
+breedSelect.addEventListener("change", (e) => {
+  e.preventDefault();
+  getSelectedInfo(e.target.value);
+});
 
 /**
  * 3. Fork your own sandbox, creating a new one named "JavaScript Axios Lab."
@@ -131,8 +217,33 @@ breedSelect.addEventListener("onLoad", initialLoad2());
  * - You can call this function by clicking on the heart at the top right of any image.
  */
 export async function favourite(imgId) {
+  console.log(imgId);
+
+  await axios
+    .post(
+      `https://api.thecatapi.com/v1/favourites/`,
+      {
+        image_id: imgId,
+        sub_id: "duyle",
+      },
+      config
+    )
+    .then((res) => console.log(res))
+    .catch((err) => console.log(err));
+
   // your code here
 }
+
+const checkFav = async () => {
+  const { data } = await axios.get(
+    `https://api.thecatapi.com/v1/favourites?limit=20&sub_id=duyle`,
+    config
+  );
+
+  console.log(await data);
+};
+
+checkFav();
 
 /**
  * 9. Test your favourite() function by creating a getFavourites() function.
